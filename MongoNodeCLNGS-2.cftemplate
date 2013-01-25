@@ -1,0 +1,335 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+
+    "Description" : "MongoDB Replica node ",
+
+    "Parameters" : {
+        "KeyName" : {
+            "Description" : "Name of an existing EC2 KeyPair to enable SSH access",
+            "Type" : "String" 
+        },
+
+        "InstanceType" : {
+            "Type" : "String", 
+            "Default" : "m1.large", 
+            "AllowedValues" : [ "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "c1.xlarge", "cc1.4xlarge" ],
+            "Description" : "EC2 instance type (e.g. m1.large, m1.xlarge, m2.xlarge)"
+        },
+
+        "VolumeSize" : {
+            "Description" : "Volume size for each EBS volume",
+            "Type" : "Number",
+            "Default" : "10"
+        },
+
+        "AccessKeyId" : {
+            "Description" : "Access Key ID",
+            "Type" : "String"
+        },
+
+        "SecretAccessKey" : {
+            "Description" : "Secret Access Key for the specified Access Key ID",
+            "Type" : "String"
+        },
+
+        "ReplicaSetName" : {
+            "Description" : "Name of the MongoDB replica set",
+            "Type" : "String"
+        },
+
+        "SecurityGroupName" : {
+            "Description" : "MongoDB replica set security group name",
+            "Type" : "String"
+        },
+
+        "InstanceZone" : {
+            "Description" : "AvailabilityZone for this instance",
+            "Type" : "String"
+        }
+    },
+
+    "Mappings" : {
+        "InstanceTypeArch" : {
+            "m1.small"    : { "Arch" : "64" },
+            "m1.medium"   : { "Arch" : "64" },
+            "m1.large"    : { "Arch" : "64" },
+            "m1.xlarge"   : { "Arch" : "64" },
+            "m2.xlarge"   : { "Arch" : "64" },
+            "m2.2xlarge"  : { "Arch" : "64" },
+            "m2.4xlarge"  : { "Arch" : "64" },
+            "c1.medium"   : { "Arch" : "64" },
+            "c1.xlarge"   : { "Arch" : "64" },
+            "cc1.4xlarge" : { "Arch" : "64HVM" }
+        },
+
+        "RegionImageZone" : {
+            "us-east-1"     : { "64" : "ami-1624987f", "64HVM" : "ami-08249861" },
+            "us-west-2"     : { "64" : "ami-2a31bf1a", "64HVM" : "ami-2431bf14" },
+            "us-west-1"     : { "64" : "ami-1bf9de5e", "64HVM" : "NOT_YET_SUPPORTED" },
+            "eu-west-1"     : { "64" : "ami-c37474b7", "64HVM" : "ami-d97474ad" },
+            "ap-southeast-1": { "64" : "ami-a6a7e7f4", "64HVM" : "NOT_YET_SUPPORTED" },
+            "ap-southeast-2": { "64" : "ami-bd990e87", "64HVM" : "NOT_YET_SUPPORTED" },
+            "ap-northeast-1": { "64" : "ami-4e6cd34f", "64HVM" : "NOT_YET_SUPPORTED" },
+            "sa-east-1"     : { "64" : "ami-1e08d103", "64HVM" : "NOT_YET_SUPPORTED" }
+        }
+    },
+
+    "Resources" : {
+
+        "ReplicaSetMemberInstance" : {
+            "Type" : "AWS::EC2::Instance",
+            "Metadata" : {
+                "AWS::CloudFormation::Init" : {
+                    "config" : {
+                        "packages" : {
+                            "yum" : {
+                                "mdadm" : [],
+                                "sysstat" : [],
+                                "xfsprogs" : [],
+                                "ntp" : []
+                            }
+                        },
+                        "files" : {
+                            "/etc/yum.repos.d/10gen.repo" : {
+                                "content" : { "Fn::Join" : ["", [
+                                    "[10gen]\n",
+                                    "name=10gen Repository\n",
+                                    "baseurl=http://downloads-distro.mongodb.org/repo/redhat/os/x86_64\n",
+                                    "gpgcheck=0\n"
+                                ] ] },
+                                "mode" : "000644",
+                                "owner" : "root",
+                                "group" : "root"
+                            },
+                            "/etc/rc.local" : {
+                               "content" : { "Fn::Join" : ["", [
+                                    "#!/bin/sh\n",
+                                    "#\n",
+                                    "# This script will be executed *after* all the other init scripts.\n",
+                                    "# You can put your own initialization stuff in here if you don't\n",
+                                    "# want to do the full Sys V style init stuff.\n",
+                                    "# \n",
+                                    "# See http://docs.mongodb.org/manual/faq/diagnostics/#does-tcp-keepalive-time-affect-sharded-clusters-and-replica-sets\n",
+                                    "echo 300 > /proc/sys/net/ipv4/tcp_keepalive_time\n",
+                                    "touch /var/lock/subsys/local\n"
+                               ] ] },
+                                "mode" : "000644",
+                                "owner" : "root",
+                                "group" : "root"
+                                }
+                        },
+                        "services" : {
+                                "sysvinit" : {
+			                         "ntpd"    : { "enabled" : "true", "ensureRunning" : "true" }
+                                 }
+                        }
+                    }
+                }
+            },
+       
+            "Properties" : {
+                "InstanceType" : { "Ref" : "InstanceType" },
+                "ImageId" : { "Fn::FindInMap" : [ "RegionImageZone", { "Ref" : "AWS::Region" }, 
+                    { "Fn::FindInMap" : [ "InstanceTypeArch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
+                "Tags" : [{ "Key" : "Name", "Value" : "MongoReplica" }],
+                "SecurityGroups" : [ { "Ref" : "SecurityGroupName" } ],
+                "KeyName" : { "Ref" : "KeyName" },
+                "AvailabilityZone" : {"Ref" : "InstanceZone" },
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                    "#!/bin/bash\n",
+                "#\n",
+                "# Sending all output to /tmp/install.log\n",
+                "#\n",
+                "exec 2> /tmp/install.log\n",
+                "exec >> /tmp/install.log\n",
+                "#\n",
+                "# Updating CloudFormation scripts\n",
+                "#\n",
+                "yum update -y aws-cfn-bootstrap\n",
+    
+                "# Error reporting helper function\n",
+                "function error_exit\n",
+                "{\n",
+                "/opt/aws/bin/cfn-signal -e 1 -r \"$1\" '", { "Ref" : "WaitHandleReplicaSetMember" }, "'\n",
+                "exit 1\n",
+                "}\n",
+                "## Initialize CloudFormation bits\n",
+                "/opt/aws/bin/cfn-init -v -s ", { "Ref" : "AWS::StackName" }, " -r ReplicaSetMemberInstance",
+                "   --access-key ",  { "Ref" : "AccessKeyId" },
+                "   --secret-key ", {"Ref": "SecretAccessKey" },
+                "   --region ", { "Ref" : "AWS::Region" }, " > /tmp/cfn-init.log 2>&1 || error_exit $(</tmp/cfn-init.log)\n",
+                "#\n",
+                "## Variables\n",
+                "#\n",
+                "RAIDMEMBERS=4\n",
+                "## Wait until ALL EBS are connected\n",
+                "while [ \"$(ls /dev/sdh*|wc -l)\" -lt \"$RAIDMEMBERS\" ]; do sleep 1; done\n",
+                "#\n",
+                "# LVM Create with stripe\n",
+                "#\n",
+                "#\n",
+                "# if all devices are ready then\n",
+                "EBS=($(ls /dev/sdh*))\n",
+                "if [ ${#EBS[@]} -eq $RAIDMEMBERS ]; then echo \"Desired EBSs ${#EBS[@]} Vs Ready $RAIDMEMBERS : Proceding...\"; pvcreate ${EBS[@]}; else exit; fi\n",
+                "# if all PVs are ready then\n",
+                "PVS=($(pvscan | head -n -1 |awk '{print $2}'))\n",
+                "if [ ${#PVS[@]} -eq $RAIDMEMBERS ]; then echo \"Desired PVs ${#PVS[@]} Vs Ready $RAIDMEMBERS : Proceding...\"; vgcreate vg0 ${PVS[@]}; else exit; fi\n",
+                "#\n",
+                "lvcreate -i 4 -I 256 -n mongo -l 100%FREE vg0\n",
+                "#\n",
+                "## Tuning read-ahead=ON\n",
+                "#\n",
+                "blockdev -v --setra 128 ${EBS[@]}\n",
+                "blockdev --setra 65536 /dev/vg0/mongo\n",
+                "#\n",
+                "## Create MongoDB filesystem\n",
+                "#\n",
+                "mkfs.xfs -f -L mongo /dev/vg0/mongo\n",
+                "mkdir -p /var/lib/mongo\n",
+                "#\n",
+                "## Update /etc/fstab\n",
+                "#\n",
+                "cat << END >> /etc/fstab\n",
+                "/dev/vg0/mongo  /var/lib/mongo  xfs   noatime,nodiratime,logbufs=8,nodev,noexec   0 0\n",
+                "END\n",
+                "#\n",
+                "## Mounting all new resources\n",
+                "#\n",
+                "mount -av\n",
+                "#\n",
+                "## Minimum performance tuning: Set limits for mongod user\n",
+                "#\n",
+                "cat << END > /etc/security/limits.conf\n",
+                "mongod  soft  nofile  64000\n",
+                "mongod  soft  nproc 32000\n",
+                "mongos  soft  nofile  64000\n",
+                "mongos  soft  nproc 32000\n",
+                "END\n",
+                "#\n",
+                "## Updating RPMs and Installing MongoDB\n",
+                "#\n",
+                "yum update -y\n",
+                "yum install mongo-10gen-server -y\n",
+                "#\n",
+                "## Create MongoDB config\n",
+                "#\n",
+                "cat << END > /etc/mongod.conf\n",
+                "# mongod.conf\n",
+                "dbpath=/var/lib/mongo\n",
+                "logpath=/var/log/mongo/mongod.log\n",
+                "logappend=true\n",
+                "fork=true\n",
+                "replSet=", {"Ref" : "ReplicaSetName"}, "\n",
+                "# Enable webserver REST\n",
+                "rest = true\n",
+                "END\n",
+                "#\n",
+                "## Fixing mongod permission on /var/lib/mongo\n",
+                "#\n",
+                "chown -Rv mongod:mongod /var/lib/mongo\n",
+                "#\n",
+                "## Updating system config and starting MongoDB\n",
+                "#\n",
+                "chkconfig mongod on\n",
+                "service mongod start\n",
+                "#\n",
+                "## CloudFormation signal that setup is complete\n",
+                "/opt/aws/bin/cfn-signal -e 0 -r \"ReplicaSetMemberInstance setup complete\" '", { "Ref" : "WaitHandleReplicaSetMember" }, "'\n"
+                ] ] } }
+            }
+        },
+
+        "MongoVolume1" : {
+            "Type" : "AWS::EC2::Volume",
+            "Properties" : {
+                "Size" : { "Ref" : "VolumeSize" },
+                 "Tags" : [{ "Key" : "Name", "Value" : "MongoVolume" }],
+                "AvailabilityZone" : { "Fn::GetAtt" : [ "ReplicaSetMemberInstance", "AvailabilityZone" ]}
+            }
+        },
+
+        "MongoVolume2" : {
+            "Type" : "AWS::EC2::Volume",
+            "Properties" : {
+                "Size" : { "Ref" : "VolumeSize" },
+                "Tags" : [{ "Key" : "Name", "Value" : "MongoVolume" }],
+                "AvailabilityZone" : { "Fn::GetAtt" : [ "ReplicaSetMemberInstance", "AvailabilityZone" ]}
+            }
+        },
+
+        "MongoVolume3" : {
+            "Type" : "AWS::EC2::Volume",
+            "Properties" : {
+                "Size" : { "Ref" : "VolumeSize" },
+                "Tags" : [{ "Key" : "Name", "Value" : "MongoVolume" }],
+                "AvailabilityZone" : { "Fn::GetAtt" : [ "ReplicaSetMemberInstance", "AvailabilityZone" ]}
+            }
+        },
+
+        "MongoVolume4" : {
+            "Type" : "AWS::EC2::Volume",
+            "Properties" : {
+                "Size" : { "Ref" : "VolumeSize" },
+                "Tags" : [{ "Key" : "Name", "Value" : "MongoVolume" }],
+                "AvailabilityZone" : { "Fn::GetAtt" : [ "ReplicaSetMemberInstance", "AvailabilityZone" ]}
+            }
+        },
+
+        "MongoVolumeMount1" : {
+            "Type" : "AWS::EC2::VolumeAttachment",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "ReplicaSetMemberInstance" },
+                "VolumeId" : { "Ref" : "MongoVolume1" },
+                "Device" : "/dev/sdh1"
+            }
+        },
+
+        "MongoVolumeMount2" : {
+            "Type" : "AWS::EC2::VolumeAttachment",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "ReplicaSetMemberInstance" },
+                "VolumeId" : { "Ref" : "MongoVolume2" },
+                "Device" : "/dev/sdh2"
+            }
+        },
+
+        "MongoVolumeMount3" : {
+            "Type" : "AWS::EC2::VolumeAttachment",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "ReplicaSetMemberInstance" },
+                "VolumeId" : { "Ref" : "MongoVolume3" },
+                "Device" : "/dev/sdh3"
+            }
+        },
+
+        "MongoVolumeMount4" : {
+            "Type" : "AWS::EC2::VolumeAttachment",
+            "Properties" : {
+                "InstanceId" : { "Ref" : "ReplicaSetMemberInstance" },
+                "VolumeId" : { "Ref" : "MongoVolume4" },
+                "Device" : "/dev/sdh4"
+            }
+        },
+
+        "WaitHandleReplicaSetMember" : {
+            "Type" : "AWS::CloudFormation::WaitConditionHandle",
+            "Properties" : {}
+        },
+
+        "WaitConditionReplicaSetMember" : {
+            "Type" : "AWS::CloudFormation::WaitCondition",
+            "DependsOn" : "ReplicaSetMemberInstance",
+            "Properties" : {
+                "Handle" : { "Ref" : "WaitHandleReplicaSetMember" },
+                "Timeout" : "600"
+            }
+        }
+    },
+
+    "Outputs" : {
+        "ReplicaSetMemberName" : {
+            "Value" : { "Fn::GetAtt" : [ "ReplicaSetMemberInstance", "PublicDnsName" ] },
+            "Description" : "public DNS name of the MongoDB Replica Set Member Instance"
+        }
+    }
+}
