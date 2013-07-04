@@ -1,18 +1,18 @@
 {
     "AWSTemplateFormatVersion" : "2010-09-09",
 
-    "Description" : "MongoDB Replica node ",
+    "Description" : "MongoDB Replica Node 20130621-01",
 
     "Parameters" : {
         "KeyName" : {
             "Description" : "Name of an existing EC2 KeyPair to enable SSH access",
-            "Type" : "String" 
+            "Type" : "String"
         },
 
         "InstanceType" : {
-            "Type" : "String", 
-            "Default" : "m1.large", 
-            "AllowedValues" : [ "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "c1.xlarge", "cc1.4xlarge" ],
+            "Type" : "String",
+            "Default" : "m1.large",
+            "AllowedValues" : [ "m1.small", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "c1.xlarge", "cc1.4xlarge" ],
             "Description" : "EC2 instance type (e.g. m1.large, m1.xlarge, m2.xlarge)"
         },
 
@@ -63,14 +63,14 @@
         },
 
         "RegionImageZone" : {
-            "us-east-1"     : { "64" : "ami-1624987f", "64HVM" : "ami-08249861" },
-            "us-west-2"     : { "64" : "ami-2a31bf1a", "64HVM" : "ami-2431bf14" },
-            "us-west-1"     : { "64" : "ami-1bf9de5e", "64HVM" : "NOT_YET_SUPPORTED" },
-            "eu-west-1"     : { "64" : "ami-c37474b7", "64HVM" : "ami-d97474ad" },
-            "ap-southeast-1": { "64" : "ami-a6a7e7f4", "64HVM" : "NOT_YET_SUPPORTED" },
-            "ap-southeast-2": { "64" : "ami-bd990e87", "64HVM" : "NOT_YET_SUPPORTED" },
-            "ap-northeast-1": { "64" : "ami-4e6cd34f", "64HVM" : "NOT_YET_SUPPORTED" },
-            "sa-east-1"     : { "64" : "ami-1e08d103", "64HVM" : "NOT_YET_SUPPORTED" }
+            "us-east-1"     : { "64" : "ami-a73758ce", "64HVM" : "ami-a73758ce" },
+            "us-west-2"     : { "64" : "ami-0358ce33", "64HVM" : "ami-d75bcde7" },
+            "us-west-1"     : { "64" : "ami-3ffed17a", "64HVM" : "ami-47fed102" },
+            "eu-west-1"     : { "64" : "ami-c7c0d6b3", "64HVM" : "ami-d1c0d6a5" },
+            "ap-southeast-1": { "64" : "ami-fade91a8", "64HVM" : "ami-18de914a" },
+            "ap-southeast-2": { "64" : "ami-39b23d38", "64HVM" : "ami-2db33c2c" },
+            "ap-northeast-1": { "64" : "ami-d16bfbeb", "64HVM" : "ami-876bfbbd" },
+            "sa-east-1"     : { "64" : "ami-5253894f", "64HVM" : "ami-38538925" }
         }
     },
 
@@ -120,23 +120,23 @@
                         },
                         "services" : {
                                 "sysvinit" : {
-			                         "ntpd"    : { "enabled" : "true", "ensureRunning" : "true" }
+                                "ntpd"    : { "enabled" : "true", "ensureRunning" : "true" }
                                  }
                         }
                     }
                 }
             },
-       
+
             "Properties" : {
                 "InstanceType" : { "Ref" : "InstanceType" },
-                "ImageId" : { "Fn::FindInMap" : [ "RegionImageZone", { "Ref" : "AWS::Region" }, 
+                "ImageId" : { "Fn::FindInMap" : [ "RegionImageZone", { "Ref" : "AWS::Region" },
                     { "Fn::FindInMap" : [ "InstanceTypeArch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
                 "Tags" : [{ "Key" : "Name", "Value" : "MongoReplica" }],
                 "SecurityGroups" : [ { "Ref" : "SecurityGroupName" } ],
                 "KeyName" : { "Ref" : "KeyName" },
                 "AvailabilityZone" : {"Ref" : "InstanceZone" },
                 "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-                    "#!/bin/bash\n",
+                "#!/bin/bash\n",
                 "#\n",
                 "# Sending all output to /tmp/install.log\n",
                 "#\n",
@@ -146,7 +146,7 @@
                 "# Updating CloudFormation scripts\n",
                 "#\n",
                 "yum update -y aws-cfn-bootstrap\n",
-    
+
                 "# Error reporting helper function\n",
                 "function error_exit\n",
                 "{\n",
@@ -180,7 +180,7 @@
                 "## Tuning read-ahead=ON\n",
                 "#\n",
                 "blockdev -v --setra 128 ${EBS[@]}\n",
-                "blockdev --setra 65536 /dev/vg0/mongo\n",
+                "blockdev --setra 256 /dev/vg0/mongo\n",
                 "#\n",
                 "## Create MongoDB filesystem\n",
                 "#\n",
