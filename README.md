@@ -13,7 +13,7 @@ We used the templates provided by 10gen at MongoDB website [Automating Deploymen
 * Add extra checks and configurations to fully automate the process;
 * Extra tags on CloudFormation objects to facilitate their identification.
 
-**Benchmark's Results** are available at our blog [MongoDB, réplicas en AWS](http://blog.celingest.com/2013/01/15/mongodb-replicas-en-aws/) and templates are commented at [Creando réplicas de MongoDB con CloudFormation](http://blog.celingest.com/2013/01/25/mongodb-replicas-cloudformation/). (Next week these posts will be available in English too)
+**Benchmark's Results** are available at our blog [Benchmarking MongoDB Replica Set in AWS](http://blog.celingest.com/en/2013/02/01/benchmarking-mongodb-replica-aws/) and templates are commented at [Creating MongoDB Replicas with CloudFormation](http://blog.celingest.com/en/2013/02/01/creating-mongodb-replicas-with-cloudformation/). )
 
 To use the templates
 --------------------
@@ -24,6 +24,10 @@ You can also use directly the RAW version of this file and use its url: [https:/
 
 Our template uses an external template file located in our S3 bucket: [https://s3-eu-west-1.amazonaws.com/mongodb-clngs/MongoNodeCLNGS-2.cftemplate](https://s3-eu-west-1.amazonaws.com/mongodb-clngs/MongoNodeCLNGS-2.cftemplate), you can download the [https://raw.github.com/celingest/mongo-formation/master/MongoNodeCLNGS-2.cftemplate](https://raw.github.com/celingest/mongo-formation/master/MongoNodeCLNGS-2.cftemplate) file and upload it to your own URL, then modify the main template.
 
+Update
+------
+
+Last template release works seamlessy also in EC2 Default VPC.
 
 
 
