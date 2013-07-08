@@ -27,7 +27,8 @@ Our template uses an external template file located in our S3 bucket: [https://s
 Update
 ------
 
-Last template release works seamlessy also in EC2 Default VPC.
+Last template release works seamlessy also in EC2 Default VPC. You can find the more details in our Blog: [MongoDB 2.4 Replicas with CloudFormation in Default VPC](http://blog.celingest.com/en/2013/07/05/mongodb-2-4-replicas-cloudformation-default-vpc/)
+
 
 
 
