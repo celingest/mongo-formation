@@ -36,6 +36,8 @@ Credits
 
 [Blog Celingest](http://blog.celingest.com/en)
 
+[AWS Profile](http://www.aws-partner-directory.com/PartnerDirectory/PartnerDetail?id=9125)
+
 
 
 
