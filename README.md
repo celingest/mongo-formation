@@ -29,6 +29,15 @@ Update
 
 Last template release works seamlessy also in EC2 Default VPC. You can find the more details in our Blog: [MongoDB 2.4 Replicas with CloudFormation in Default VPC](http://blog.celingest.com/en/2013/07/05/mongodb-2-4-replicas-cloudformation-default-vpc/)
 
+Credits
+-------
+
+[Celingest](http://celingest.com/en)
+
+[Blog Celingest](http://blog.celingest.com/en)
+
+[AWS Profile](http://www.aws-partner-directory.com/PartnerDirectory/PartnerDetail?id=9125)
+
 
 
 
